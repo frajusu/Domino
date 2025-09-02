@@ -1,0 +1,22 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=2]
+
+[ext_resource path="res://assets/shaders/domino_3d.tres" type="Shader" id=1]
+
+[resource]
+shader = ExtResource( 1 )
+shader_param/r1 = -0.64
+shader_param/offset1 = -0.252
+shader_param/offset2 = -0.412
+shader_param/offset3 = -0.582
+shader_param/offset4 = -0.594
+shader_param/offset5 = -0.173
+shader_param/offset6 = -0.322
+shader_param/offset7 = -0.501
+shader_param/offset8 = -0.606
+shader_param/offset9 = -0.089
+shader_param/offset10 = null
+shader_param/shadow_color = Color( 0, 0, 0, 1 )
+shader_param/shadow_strength = 0.0
+shader_param/original_color = Color( 1, 0, 0, 1 )
+shader_param/real_thickness = 1.0
+shader_param/fall_progress = 0.0
