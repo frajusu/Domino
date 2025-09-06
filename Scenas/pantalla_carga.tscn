@@ -1,8 +1,0 @@
-[gd_scene format=2]
-
-[node name="pantalla_carga" type="CanvasLayer" groups=["pantalla_carga"]]
-
-[node name="fondo" type="ColorRect" parent="."]
-margin_right = 1024.0
-margin_bottom = 576.0
-color = Color( 0.180392, 0.372549, 0.290196, 1 )
