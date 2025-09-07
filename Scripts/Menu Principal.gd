@@ -1,0 +1,370 @@
+extends Node2D
+
+
+var botonHover =   {"Play" : false,
+					"Options" : false,
+					"Quit" : false,
+					"Discord" : false,
+}
+
+export var shake_duration := 0.4
+export var shake_strength := 4.0
+export var shake_speed := 30.0
+var nodo_a_sacudir
+var is_shaking := false
+var shake_timer := 0.0
+var original_pos := Vector2()
+
+
+var mover_letras = true
+
+export(float) var amplitude = 5.0
+export(float) var speed = 2.0
+export(float) var rotation_amount = 3.0 # degrees of rotation for the middle letter
+export(float) var rotation_speed = 1.5  # speed of rotation
+export(float) var rotation_offset = 90.0 # base rotation in degrees
+
+var letters = []
+
+
+var encontro_partida_guardada = false
+
+
+var menu_actual = "asd"
+
+
+func _ready():
+	if get_tree().get_nodes_in_group("pantalla_carga").size() == 0:
+		menu_actual = "transision_a_default"
+	
+	encontro_partida_guardada = encontrar_partida_guardada_sistema()
+	$Seleccionar_partida.visible = true
+
+
+func encontrar_partida_guardada_sistema():
+	return false
+
+
+func start_shake(nodo):
+	if not is_shaking:
+		is_shaking = true
+		shake_timer = shake_duration
+		original_pos = nodo.position
+		nodo_a_sacudir = nodo
+
+
+func _physics_process(_delta):
+	if is_shaking:
+		shake_timer -= 0.1
+		if shake_timer > 0:
+			# Factor de decaimiento para que se vaya apagando el efecto
+			var decay = shake_timer / shake_duration
+			# Desplazamiento oscilante aleatorio
+			var offset = Vector2(
+				randf() * 2 - 1,
+				randf() * 2 - 1
+			).normalized() * shake_strength * decay
+			# Aplicar shake con velocidad de oscilacion
+			nodo_a_sacudir.position = original_pos + offset * sin(OS.get_ticks_msec() / 1000.0 * shake_speed)
+		else:
+			nodo_a_sacudir.position = original_pos
+			is_shaking = false
+			nodo_a_sacudir = null
+	
+	
+	if menu_actual == "transision_a_default":
+		$Viewport/Menu/Discord.position.x = lerp($Viewport/Menu/Discord.position.x, -237.857, 0.1)
+		
+		$Viewport/Menu/Play.position.y = lerp($Viewport/Menu/Play.position.y, 54, 0.1)
+		$Viewport/Menu/Options.position.y = $Viewport/Menu/Play.position.y
+		$Viewport/Menu/Quit.position.y = $Viewport/Menu/Play.position.y
+		
+		$Viewport/fondo_botones.position.y = lerp($Viewport/fondo_botones.position.y, 83, 0.1)
+		
+		
+		if $Viewport/Letras.material.get_shader_param("dissolve_value") < 1:
+			$Viewport/Letras.material.set_shader_param("dissolve_value", $Viewport/Letras.material.get_shader_param("dissolve_value")+0.01)
+		else:
+			if menu_actual == "transision_a_default":
+				menu_actual = "default"
+	
+	if Input.is_action_just_pressed("fullscreen"):
+		OS.window_fullscreen = !OS.window_fullscreen
+	
+	
+	if mover_letras:
+		# Get all child letters (run only once)
+		if letters.empty():
+			letters = $Viewport/Letras.get_children()
+			for letter in letters:
+				# Store initial position in metadata
+				letter.set_meta("base_pos", letter.position)
+		
+		var time = OS.get_ticks_msec() / 1000.0 * speed
+		
+		for i in range(letters.size()):
+			var letter = letters[i]
+			var base_pos = letter.get_meta("base_pos")
+			# Add phase offset for wave effect
+			var phase = i * 0.5
+			letter.position.y = base_pos.y + sin(time + phase) * amplitude
+		
+		# Rotate the middle letter slightly left and right around an offset
+		if letters.size() > 0:
+			var mid_index = letters.size() / 2
+			var mid_letter = letters[int(mid_index)]
+			# Rotation = offset + sine wave oscillation
+			mid_letter.rotation = deg2rad(rotation_offset + sin(time * rotation_speed) * rotation_amount)
+	
+	
+	var posision = get_global_mouse_position()
+	
+	var camara = get_node("Viewport/Camera2D")
+	camara.position = (((posision-camara.position)/40))
+	$Seleccionar_partida.position = ((($Seleccionar_partida.position-posision)/100))
+	
+	if menu_actual == "default":
+		var menu = get_node("Viewport/Menu")
+		for i in range(menu.get_child_count()):
+			var boton = menu.get_child(i)
+			if !boton.visible:
+				continue
+			
+			# diferencias por nombre
+			var diffs = {
+				"Quit":    Vector2(40, 25),
+				"Options": Vector2(50, 25),
+				"Discord": Vector2(14, 14),
+				"Play":    Vector2(40, 20)
+			}
+			var diferencia = diffs.get(boton.name, Vector2(40, 20))
+			
+			var pos = get_global_mouse_position()
+			var dentro_x = pos.x > boton.global_position.x - diferencia.x and pos.x < boton.global_position.x + diferencia.x
+			var dentro_y = pos.y > boton.global_position.y - diferencia.y and pos.y < boton.global_position.y + diferencia.y
+			var dentro = dentro_x and dentro_y
+			
+			if dentro:
+				# aca pones lo que ya tenias para hover/click de cada boton
+				if Input.is_action_pressed("click"):
+					botonHover[boton.name] = true
+					match boton.name:
+						"Quit":
+							boton.position = Vector2(163.143, 56)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(0, 0)
+							boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.4)
+						"Discord":
+							boton.position = Vector2(-239.857, -154)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(0, 0)
+							boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.6)
+						"Options":
+							boton.position = Vector2(-53, 56)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(2, -8)
+							boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.4)
+						"Play":
+							boton.position = Vector2(-159, 56)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(-1, -8)
+							boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.4)
+				else:
+					if botonHover[boton.name]:
+						botonHover[boton.name] = false
+						if boton.name == "Quit":
+							get_tree().quit()
+						
+						if boton.name == "Play":
+							#Cargador.goto_scene("res://Scenas/menus/carrusel.tscn")
+							mover_suave(get_node("Seleccionar_partida/1"), Vector2(0,0), 0.3)
+							aprarecer_suave($Sprite, 70, 0.2)
+							menu_actual = "select_partida"
+							botonHover[boton.name] = false
+							boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.197)
+							boton.get_node("Play_sprites/Sprite").use_parent_material = false
+							boton.position = Vector2(-157, 54)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(-2.857, -5)
+							continue
+					
+					# reset valores segun boton
+					match boton.name:
+						"Quit":
+							boton.position = Vector2(161.143, 54)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(2, 3)
+						"Options":
+							boton.position = Vector2(-53, 54)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(1.143, -5)
+						"Play":
+							boton.position = Vector2(-157, 54)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(-2.857, -5)
+						"Discord":
+							boton.position = Vector2(-237.857, -156)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(-4, 4)
+					
+					boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.197)
+				
+				# rotaciones
+				var diferencia_x = abs(pos.x) - abs(boton.get_node("Play_sprites").global_position.x)
+				var diferencia_y = abs(boton.get_node("Play_sprites").global_position.y) - abs(pos.y)
+				match boton.name:
+					"Quit":
+						boton.get_node("Play_sprites").material.set_shader_param("y_rot", diferencia_x / 8)
+						boton.get_node("Play_sprites").material.set_shader_param("x_rot", diferencia_y / 8)
+					"Options":
+						boton.get_node("Play_sprites").material.set_shader_param("y_rot", -diferencia_x / 15)
+						boton.get_node("Play_sprites").material.set_shader_param("x_rot", diferencia_y / 8)
+					"Play":
+						boton.get_node("Play_sprites").material.set_shader_param("y_rot", -diferencia_x / 8)
+						boton.get_node("Play_sprites").material.set_shader_param("x_rot", diferencia_y / 8)
+					"Discord":
+						boton.get_node("Play_sprites").material.set_shader_param("y_rot", -diferencia_x / 2)
+						boton.get_node("Play_sprites").material.set_shader_param("x_rot", -diferencia_y / 2)
+				
+				boton.get_node("Play_sprites/Sprite").use_parent_material = true
+			else:
+				botonHover[boton.name] = false
+				boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.197)
+				boton.get_node("Play_sprites/Sprite").use_parent_material = false
+				match boton.name:
+					"Quit":
+						boton.position = Vector2(161.143, 54)
+						boton.get_node("Play_sprites/Shaw").position = Vector2(2, 3)
+					"Options":
+						boton.position = Vector2(-53, 54)
+						boton.get_node("Play_sprites/Shaw").position = Vector2(1.143, -5)
+					"Play":
+						boton.position = Vector2(-157, 54)
+						boton.get_node("Play_sprites/Shaw").position = Vector2(-2.857, -5)
+					"Discord":
+						boton.position = Vector2(-237.857, -156)
+						boton.get_node("Play_sprites/Shaw").position = Vector2(-4, 4)
+	
+	
+	if menu_actual == "select_partida":
+		var menu = get_node("Seleccionar_partida/1/Menu")
+		for i in range(menu.get_child_count()):
+			var boton = menu.get_child(i)
+			if !boton.visible:
+				continue
+			
+			var diffs = {
+				"NEW":    Vector2(50, 30),
+				"CONTINUE":    Vector2(75, 30),
+			}
+			
+			var diferencia = diffs.get(boton.name, Vector2(40, 20))
+			
+			var pos = get_global_mouse_position()
+			var dentro_x = pos.x > boton.global_position.x - diferencia.x and pos.x < boton.global_position.x + diferencia.x
+			var dentro_y = pos.y > boton.global_position.y - diferencia.y and pos.y < boton.global_position.y + diferencia.y
+			var dentro = dentro_x and dentro_y
+			
+			if dentro:
+				# aca pones lo que ya tenias para hover/click de cada boton
+				if Input.is_action_pressed("click"):
+					botonHover[boton.name] = true
+					match boton.name:
+						"NEW":
+							boton.position = Vector2(-65.857-3, 382+4)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(-0.762, -8)
+							boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.4)
+						"CONTINUE":
+							if encontro_partida_guardada:
+								boton.position = Vector2(77+3, 382+4)
+								boton.get_node("Play_sprites/Shaw").position = Vector2(-0.762, -8)
+				else:
+					if botonHover[boton.name]:
+						botonHover[boton.name] = false
+						if boton.name == "NEW":
+							Cargador.goto_scene("res://Scenas/Game.tscn")
+						
+						if boton.name == "CONTINUE":
+							start_shake(get_node("Seleccionar_partida/1/Menu/CONTINUE/Candado"))
+						
+						if boton.name == "Play":
+							#Cargador.goto_scene("res://Scenas/menus/carrusel.tscn")
+							mover_suave(get_node("Seleccionar_partida/1"), Vector2(0,0), 0.3)
+							aprarecer_suave($Sprite, 70, 0.2)
+							menu_actual = "select_partida"
+							botonHover[boton.name] = false
+							boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.197)
+							boton.get_node("Play_sprites/Sprite").use_parent_material = false
+							boton.position = Vector2(-157, 54)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(-2.857, -5)
+							continue
+					
+					# reset valores segun boton
+					match boton.name:
+						"NEW":
+							boton.position = Vector2(-65.857, 382)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(-3, -5)
+						"CONTINUE":
+							boton.position = Vector2(77, 382)
+							boton.get_node("Play_sprites/Shaw").position = Vector2(1, -5)
+					
+					boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.197)
+				
+				# rotaciones
+				var diferencia_x = abs(pos.x) - abs(boton.get_node("Play_sprites").global_position.x)
+				var diferencia_y = (boton.get_node("Play_sprites").global_position.y) - (pos.y)
+				match boton.name:
+					"NEW":
+						boton.get_node("Play_sprites").material.set_shader_param("y_rot", -diferencia_x / 8)
+						boton.get_node("Play_sprites").material.set_shader_param("x_rot", diferencia_y / 8)
+					"CONTINUE":
+						if encontro_partida_guardada:
+							boton.get_node("Play_sprites").material.set_shader_param("y_rot", diferencia_x / 8)
+							boton.get_node("Play_sprites").material.set_shader_param("x_rot", diferencia_y / 8)
+				
+				boton.get_node("Play_sprites/Sprite").use_parent_material = true
+			else:
+				botonHover[boton.name] = false
+				boton.get_node("Play_sprites").material.set_shader_param("flash_modifier", 0.197)
+				match boton.name:
+					"NEW":
+						boton.position = Vector2(-65.857, 382)
+						boton.get_node("Play_sprites/Shaw").position = Vector2(-3, -5)
+						boton.get_node("Play_sprites/Sprite").use_parent_material = false
+					"CONTINUE":
+						boton.position = Vector2(77, 382)
+						boton.get_node("Play_sprites/Shaw").position = Vector2(1, -5)
+						
+						if encontro_partida_guardada:
+							boton.get_node("Play_sprites/Sprite").use_parent_material = true
+
+
+func mover_suave(nodo: Node2D, nueva_pos: Vector2, duracion: float = 0.5) -> void:
+	# Verificamos si el nodo ya tiene un Tween hijo
+	var tween: Tween = nodo.get_node_or_null("TweenMover")
+	if tween == null:
+		tween = Tween.new()
+		tween.name = "TweenMover"
+		nodo.add_child(tween)
+	
+	# Cancelamos cualquier tween anterior
+	var _a = tween.stop_all()
+	
+	# Interpolamos la posición con rebote y guardamos el retorno en _a
+	_a = tween.interpolate_property(
+		nodo, "position", nodo.position, nueva_pos,
+		duracion, Tween.TRANS_BACK, Tween.EASE_OUT
+	)
+	_a = tween.start()
+
+
+func aprarecer_suave(nodo: Node2D, modulate, duracion: float = 0.5) -> void:
+	# Verificamos si el nodo ya tiene un Tween hijo
+	var tween: Tween = nodo.get_node_or_null("TweenModu")
+	
+	if tween == null:
+		tween = Tween.new()
+		tween.name = "TweenModu"
+		nodo.add_child(tween)
+	
+	# Cancelamos cualquier tween anterior
+	var _a = tween.stop_all()
+	
+	# Iniciamos la interpolación
+	_a = tween.interpolate_property(
+		nodo, "modulate:a8", nodo.modulate.a8, modulate,
+		duracion, Tween.TRANS_LINEAR, Tween.EASE_IN_OUT
+	)
+	_a = tween.start()
+
