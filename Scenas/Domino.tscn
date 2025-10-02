@@ -1,0 +1,519 @@
+[gd_scene load_steps=22 format=2]
+
+[ext_resource path="res://icon.png" type="Texture" id=1]
+[ext_resource path="res://assets/tex/top_domino.png" type="Texture" id=2]
+[ext_resource path="res://assets/tex/pixe.png" type="Texture" id=3]
+[ext_resource path="res://assets/tex/flechita.png" type="Texture" id=4]
+[ext_resource path="res://Scripts/Domino.gd" type="Script" id=5]
+[ext_resource path="res://assets/tex/recuadro1.png" type="Texture" id=6]
+[ext_resource path="res://assets/upheavtt.ttf" type="DynamicFontData" id=7]
+[ext_resource path="res://assets/tex/recuadro2.png" type="Texture" id=8]
+[ext_resource path="res://assets/tex/dominos.png" type="Texture" id=9]
+
+[sub_resource type="Shader" id=8]
+code = "shader_type canvas_item;
+
+uniform vec4 color : hint_color = vec4(1.0);
+uniform float width : hint_range(0, 10) = 1.0;
+uniform int pattern : hint_range(0, 2) = 0; // diamond, circle, square
+uniform bool inside = false;
+uniform bool add_margins = true; // only useful when inside is false
+uniform vec2 number_of_images = vec2(1.0); // number of horizontal and vertical images in the sprite sheet
+
+void vertex() {
+	if (add_margins) {
+		VERTEX += sign(VERTEX) * width; // replace sign(VERTEX) by (sign(VERTEX) * 2.0 - 1.0) if not Centered
+	}
+}
+
+bool hasContraryNeighbour(vec2 uv, vec2 texture_pixel_size, vec2 image_top_left, vec2 image_bottom_right, sampler2D texture) {
+	for (float i = -ceil(width); i <= ceil(width); i++) {
+		float x = abs(i) > width ? width * sign(i) : i;
+		float offset;
+		
+		if (pattern == 0) {
+			offset = width - abs(x);
+		} else if (pattern == 1) {
+			offset = floor(sqrt(pow(width + 0.5, 2) - x * x));
+		} else if (pattern == 2) {
+			offset = width;
+		}
+		
+		for (float j = -ceil(offset); j <= ceil(offset); j++) {
+			float y = abs(j) > offset ? offset * sign(j) : j;
+			vec2 xy = uv + texture_pixel_size * vec2(x, y);
+			
+			if ((xy != clamp(xy, image_top_left, image_bottom_right) || texture(texture, xy).a <= 0.0) == inside) {
+				return true;
+			}
+		}
+	}
+	
+	return false;
+}
+
+void fragment() {
+	vec2 uv = UV;
+	vec2 image_top_left = floor(uv * number_of_images) / number_of_images;
+	vec2 image_bottom_right = image_top_left + vec2(1.0) / number_of_images;
+
+	if (add_margins) {
+		vec2 texture_pixel_size = vec2(1.0) / (vec2(1.0) / TEXTURE_PIXEL_SIZE + vec2(width * 2.0) * number_of_images);
+		
+		uv = (uv - texture_pixel_size * width - image_top_left) * TEXTURE_PIXEL_SIZE / texture_pixel_size + image_top_left;
+		
+		if (uv != clamp(uv, image_top_left, image_bottom_right)) {
+			COLOR.a = 0.0;
+		} else {
+			COLOR = texture(TEXTURE, uv);
+		}
+	} else {
+		COLOR = texture(TEXTURE, uv);
+	}
+	
+	if ((COLOR.a > 0.0) == inside && hasContraryNeighbour(uv, TEXTURE_PIXEL_SIZE, image_top_left, image_bottom_right, TEXTURE)) {
+		COLOR.rgb = inside ? mix(COLOR.rgb, color.rgb, color.a) : color.rgb;
+		COLOR.a += (1.0 - COLOR.a) * color.a;
+	}
+}"
+
+[sub_resource type="ShaderMaterial" id=9]
+shader = SubResource( 8 )
+shader_param/color = Color( 0.176471, 0.231373, 0.341176, 1 )
+shader_param/width = 1.0
+shader_param/pattern = 0
+shader_param/inside = false
+shader_param/add_margins = true
+shader_param/number_of_images = Vector2( 1, 1 )
+
+[sub_resource type="DynamicFont" id=10]
+size = 20
+font_data = ExtResource( 7 )
+
+[sub_resource type="Shader" id=4]
+code = "shader_type canvas_item;
+
+uniform vec4 from_color : hint_color = vec4(1.0, 0.0, 0.0, 1.0); // color a reemplazar
+uniform vec4 to_color : hint_color = vec4(0.0, 1.0, 0.0, 1.0);   // color de reemplazo
+uniform float tolerance = 0.05; // tolerancia en distancia de color (0..1)
+
+void fragment() {
+    vec4 tex_color = texture(TEXTURE, UV);
+    
+    // distancia entre colores RGB
+    float d = distance(tex_color.rgb, from_color.rgb);
+    
+    // si esta dentro de la tolerancia, reemplaza
+    if (d < tolerance) {
+        tex_color.rgb = to_color.rgb;
+        tex_color.a = tex_color.a; // preserva alfa original
+    }
+
+    COLOR = tex_color;
+}
+"
+
+[sub_resource type="ShaderMaterial" id=5]
+shader = SubResource( 4 )
+shader_param/from_color = Color( 0, 0, 0, 1 )
+shader_param/to_color = Color( 0, 1, 0, 1 )
+shader_param/tolerance = 0.05
+
+[sub_resource type="Shader" id=86]
+code = "shader_type canvas_item;
+
+// Radio en píxeles, configurable
+uniform float radius_px : hint_range(0.0, 256.0, 1.0) = 16.0;
+uniform bool rounded_corner_top_left = true;
+uniform bool rounded_corner_top_right = true;
+uniform bool rounded_corner_bottom_left = true;
+uniform bool rounded_corner_bottom_right = true;
+
+uniform int amount = 40;
+
+// Tamaño real del rectángulo (lo seteás desde GDScript con rect_size)
+uniform vec2 rect_size = vec2(64.0, 64.0);
+
+// Nuevas variables
+uniform vec4 flash_color : hint_color = vec4(1.0);
+uniform float flash_modifier : hint_range(0.0, 1.0) = 0.0;
+
+void fragment() {
+	vec2 grid_uv = round(UV * float(amount)) / float(amount);
+	vec4 image = texture(TEXTURE, grid_uv);
+	
+	// Pasamos UV (0–1) a coordenadas locales en píxeles
+	vec2 pos = grid_uv * rect_size;
+
+	float dist;
+	
+	// Top left
+	if (rounded_corner_top_left) {
+		dist = length(pos - vec2(radius_px, radius_px));
+		if (dist > radius_px && pos.x < radius_px && pos.y < radius_px) {
+			image.a = 0.0;
+		}
+	}
+	// Top right
+	if (rounded_corner_top_right) {
+		dist = length(pos - vec2(rect_size.x - radius_px, radius_px));
+		if (dist > radius_px && pos.x > rect_size.x - radius_px && pos.y < radius_px) {
+			image.a = 0.0;
+		}
+	}
+	// Bottom left
+	if (rounded_corner_bottom_left) {
+		dist = length(pos - vec2(radius_px, rect_size.y - radius_px));
+		if (dist > radius_px && pos.x < radius_px && pos.y > rect_size.y - radius_px) {
+			image.a = 0.0;
+		}
+	}
+	// Bottom right
+	if (rounded_corner_bottom_right) {
+		dist = length(pos - vec2(rect_size.x - radius_px, rect_size.y - radius_px));
+		if (dist > radius_px && pos.x > rect_size.x - radius_px && pos.y > rect_size.y - radius_px) {
+			image.a = 0.0;
+		}
+	}
+
+	// Mezcla el color original con el flash
+	image.rgb = mix(image.rgb, flash_color.rgb, flash_modifier);
+	image.a *= mix(1.0, flash_color.a, flash_modifier);
+
+	COLOR = image;
+}
+"
+
+[sub_resource type="ShaderMaterial" id=85]
+shader = SubResource( 86 )
+shader_param/radius_px = 35.0
+shader_param/rounded_corner_top_left = true
+shader_param/rounded_corner_top_right = true
+shader_param/rounded_corner_bottom_left = true
+shader_param/rounded_corner_bottom_right = true
+shader_param/amount = 73
+shader_param/rect_size = Vector2( 64, 64 )
+shader_param/flash_color = Color( 1, 1, 1, 1 )
+shader_param/flash_modifier = 0.0
+
+[sub_resource type="Shader" id=12]
+code = "shader_type canvas_item;
+
+uniform vec4 outline_color : hint_color = vec4(0.0, 0.0, 0.0, 1.0);
+uniform int outline_size : hint_range(1, 5) = 1;
+
+uniform vec4 original_color : hint_color = vec4(1.0, 1.0, 1.0, 1.0); // color que reemplaza todo el sprite
+
+void fragment() {
+    vec4 tex_color = texture(TEXTURE, UV);
+
+    vec2 pixel_size = TEXTURE_PIXEL_SIZE;
+    bool has_outline = false;
+
+    // Si el pixel es transparente, chequeamos vecinos para el outline
+    if (tex_color.a < 0.1) {
+        vec2 offsets[4];
+        offsets[0] = vec2(float(outline_size), 0.0);   // derecha
+        offsets[1] = vec2(-float(outline_size), 0.0);  // izquierda
+        offsets[2] = vec2(0.0, float(outline_size));   // abajo
+        offsets[3] = vec2(0.0, -float(outline_size));  // arriba
+
+        for (int i = 0; i < 4; i++) {
+            vec4 neighbor = texture(TEXTURE, UV + offsets[i] * pixel_size);
+            if (neighbor.a > 0.1) {
+                has_outline = true;
+            }
+        }
+
+        if (has_outline) {
+            COLOR = outline_color;
+        } else {
+            COLOR = vec4(0.0);
+        }
+    } else {
+        // Todo el sprite se pinta del color 'original_color'
+        COLOR = vec4(original_color.rgb, tex_color.a);
+    }
+}
+"
+
+[sub_resource type="ShaderMaterial" id=11]
+shader = SubResource( 12 )
+shader_param/outline_color = Color( 1, 1, 1, 1 )
+shader_param/outline_size = 1
+shader_param/original_color = Color( 1, 1, 1, 1 )
+
+[sub_resource type="Animation" id=2]
+resource_name = "aparecer"
+length = 2.0
+tracks/0/type = "value"
+tracks/0/path = NodePath("Parte_de_atras:scale:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 1, 2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ 2.0, 0.0, 0.0 ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("Sprite:scale:x")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 1, 2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ 0.0, 0.0, 2.0 ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("Parte_de_costado:scale:y")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0, 1.3, 2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ 2.0, 2.0, 0.0 ]
+}
+tracks/3/type = "value"
+tracks/3/path = NodePath("Parte_de_costado:visible")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/keys = {
+"times": PoolRealArray( 0, 0.9, 1.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 1,
+"values": [ false, true, false ]
+}
+tracks/4/type = "value"
+tracks/4/path = NodePath("Parte_de_atras:visible")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/keys = {
+"times": PoolRealArray( 0, 2 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ true, false ]
+}
+
+[sub_resource type="RectangleShape2D" id=1]
+extents = Vector2( 30.5, 63.25 )
+
+[sub_resource type="CircleShape2D" id=3]
+radius = 37.0
+
+[node name="Domino" type="Node2D"]
+position = Vector2( 540, 333 )
+script = ExtResource( 5 )
+
+[node name="Descripcion" type="Node2D" parent="."]
+material = SubResource( 9 )
+position = Vector2( 1, -97 )
+scale = Vector2( 0.5, 0.5 )
+z_index = 2
+
+[node name="MarginContainer" type="Node2D" parent="Descripcion"]
+use_parent_material = true
+position = Vector2( -132, -138 )
+
+[node name="Titulo" type="Node2D" parent="Descripcion/MarginContainer"]
+use_parent_material = true
+position = Vector2( 0, 18 )
+
+[node name="sombra" type="Node2D" parent="Descripcion/MarginContainer/Titulo"]
+modulate = Color( 0.145098, 0.172549, 0.227451, 1 )
+position = Vector2( -4, 14 )
+
+[node name="izq" type="Sprite" parent="Descripcion/MarginContainer/Titulo/sombra"]
+use_parent_material = true
+position = Vector2( 54, -8 )
+scale = Vector2( 4, 4 )
+texture = ExtResource( 8 )
+region_enabled = true
+region_rect = Rect2( 0, 0, 16, 13 )
+
+[node name="mid" type="Sprite" parent="Descripcion/MarginContainer/Titulo/sombra"]
+use_parent_material = true
+position = Vector2( 126, -8 )
+scale = Vector2( 28.753, 4 )
+texture = ExtResource( 8 )
+region_enabled = true
+region_rect = Rect2( 16, 0, 4, 13 )
+
+[node name="der" type="Sprite" parent="Descripcion/MarginContainer/Titulo/sombra"]
+use_parent_material = true
+position = Vector2( 214, -8 )
+scale = Vector2( 4, 4 )
+texture = ExtResource( 8 )
+region_enabled = true
+region_rect = Rect2( 16, 0, 16, 13 )
+
+[node name="real" type="Node2D" parent="Descripcion/MarginContainer/Titulo"]
+use_parent_material = true
+
+[node name="izq" type="Sprite" parent="Descripcion/MarginContainer/Titulo/real"]
+use_parent_material = true
+position = Vector2( 54, -8 )
+scale = Vector2( 4, 4 )
+texture = ExtResource( 8 )
+region_enabled = true
+region_rect = Rect2( 0, 0, 16, 13 )
+
+[node name="mid" type="Sprite" parent="Descripcion/MarginContainer/Titulo/real"]
+use_parent_material = true
+position = Vector2( 126, -8 )
+scale = Vector2( 28.753, 4 )
+texture = ExtResource( 8 )
+region_enabled = true
+region_rect = Rect2( 16, 0, 4, 13 )
+
+[node name="der" type="Sprite" parent="Descripcion/MarginContainer/Titulo/real"]
+use_parent_material = true
+position = Vector2( 206, -8 )
+scale = Vector2( 4, 4 )
+texture = ExtResource( 8 )
+region_enabled = true
+region_rect = Rect2( 16, 0, 16, 13 )
+
+[node name="Label" type="RichTextLabel" parent="Descripcion/MarginContainer/Titulo"]
+margin_left = 28.0
+margin_top = -18.0
+margin_right = 231.0
+margin_bottom = 21.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+custom_colors/default_color = Color( 0.145098, 0.172549, 0.227451, 1 )
+custom_fonts/mono_font = SubResource( 10 )
+custom_fonts/bold_italics_font = SubResource( 10 )
+custom_fonts/italics_font = SubResource( 10 )
+custom_fonts/bold_font = SubResource( 10 )
+custom_fonts/normal_font = SubResource( 10 )
+text = "asdasdasda"
+scroll_active = false
+
+[node name="Descripcion" type="Node2D" parent="Descripcion/MarginContainer"]
+use_parent_material = true
+position = Vector2( 22, 40 )
+
+[node name="Recuadro2" type="Sprite" parent="Descripcion/MarginContainer/Descripcion"]
+self_modulate = Color( 0.145098, 0.172549, 0.227451, 1 )
+position = Vector2( 112, 82 )
+scale = Vector2( 4, 4 )
+texture = ExtResource( 6 )
+
+[node name="Recuadro3" type="Sprite" parent="Descripcion/MarginContainer/Descripcion"]
+self_modulate = Color( 0.145098, 0.172549, 0.227451, 1 )
+position = Vector2( 104, 82 )
+scale = Vector2( 4, 4 )
+texture = ExtResource( 6 )
+
+[node name="Recuadro1" type="Sprite" parent="Descripcion/MarginContainer/Descripcion"]
+use_parent_material = true
+position = Vector2( 108, 70 )
+scale = Vector2( 4, 4 )
+texture = ExtResource( 6 )
+
+[node name="Label" type="RichTextLabel" parent="Descripcion/MarginContainer/Descripcion"]
+margin_left = 10.0
+margin_top = 16.0
+margin_right = 213.0
+margin_bottom = 132.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+custom_colors/default_color = Color( 0.145098, 0.172549, 0.227451, 1 )
+custom_fonts/mono_font = SubResource( 10 )
+custom_fonts/bold_italics_font = SubResource( 10 )
+custom_fonts/italics_font = SubResource( 10 )
+custom_fonts/bold_font = SubResource( 10 )
+custom_fonts/normal_font = SubResource( 10 )
+text = "asdasdasda"
+scroll_active = false
+
+[node name="Shadow" type="Sprite" parent="."]
+visible = false
+self_modulate = Color( 0, 0, 0, 0.160784 )
+material = SubResource( 5 )
+scale = Vector2( 2, 2 )
+texture = ExtResource( 1 )
+region_rect = Rect2( 3, 16, 10, 32 )
+
+[node name="Pixe" type="Sprite" parent="."]
+self_modulate = Color( 1, 1, 1, 0.215686 )
+material = SubResource( 85 )
+scale = Vector2( 20, 20 )
+texture = ExtResource( 3 )
+
+[node name="Sprite-top" type="Sprite" parent="."]
+visible = false
+material = SubResource( 11 )
+scale = Vector2( 2, 2 )
+texture = ExtResource( 2 )
+offset = Vector2( -1, 0 )
+region_rect = Rect2( 23, 21, 9, 28 )
+
+[node name="Flechita" type="Sprite" parent="Sprite-top" groups=["slots"]]
+self_modulate = Color( 1, 1, 1, 0.192157 )
+show_behind_parent = true
+position = Vector2( 28.5772, 0.792908 )
+z_index = 1
+texture = ExtResource( 4 )
+offset = Vector2( -9.832, 1.612 )
+
+[node name="Sprite" type="Sprite" parent="."]
+material = SubResource( 5 )
+scale = Vector2( 2, 2 )
+texture = ExtResource( 9 )
+region_enabled = true
+region_rect = Rect2( 16, 0, 32, 64 )
+
+[node name="Puntitos" type="Node2D" parent="Sprite"]
+position = Vector2( -6.5, -22.5 )
+
+[node name="Parte_de_atras" type="Sprite" parent="."]
+visible = false
+scale = Vector2( 1e-05, 2 )
+texture = ExtResource( 9 )
+region_enabled = true
+region_rect = Rect2( 16, 0, 32, 64 )
+
+[node name="Parte_de_costado" type="Sprite" parent="."]
+visible = false
+material = SubResource( 5 )
+scale = Vector2( 2, 1e-05 )
+texture = ExtResource( 9 )
+region_enabled = true
+region_rect = Rect2( 245, 192, 6, 64 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+playback_speed = 5.0
+anims/aparecer = SubResource( 2 )
+
+[node name="detector" type="Sprite" parent="."]
+visible = false
+position = Vector2( -1.90735e-06, -5 )
+scale = Vector2( 0.46875, 0.5 )
+texture = ExtResource( 1 )
+region_rect = Rect2( 3, 16, 10, 32 )
+
+[node name="detector2" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="detector2"]
+shape = SubResource( 1 )
+
+[node name="detector3" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="detector3"]
+shape = SubResource( 3 )
+
+[connection signal="animation_finished" from="AnimationPlayer" to="." method="_on_AnimationPlayer_animation_finished"]
