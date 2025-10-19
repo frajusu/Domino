@@ -1,0 +1,183 @@
+[gd_scene load_steps=11 format=2]
+
+[ext_resource path="res://assets/tex/dominos.png" type="Texture" id=1]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform sampler2D noise_tex : hint_white;
+uniform vec4 layer0_color : hint_color = vec4(0.45,0.15,0.02,1.0);
+uniform vec4 layer1_color : hint_color = vec4(0.75,0.25,0.05,1.0);
+uniform vec4 layer2_color : hint_color = vec4(0.95,0.45,0.06,1.0);
+uniform vec4 layer3_color : hint_color = vec4(1.00,0.85,0.25,1.0);
+
+uniform float pixel_size = 8.0;   // tamaño de bloque visible (ajustalo)
+uniform float noise_scale = 4.0;  // cuántas veces se repite el ruido
+uniform float speed = 0.2;
+
+uniform float thresh0 = 0.25;
+uniform float thresh1 = 0.5;
+uniform float thresh2 = 0.75;
+
+void fragment() {
+	vec2 tex_size = vec2(1.0 / TEXTURE_PIXEL_SIZE.x, 1.0 / TEXTURE_PIXEL_SIZE.y);
+	vec2 pixel_uv = floor(UV * tex_size / pixel_size);
+
+	float t = TIME * speed;
+	vec2 noise_uv = pixel_uv / noise_scale + vec2(t * 0.1, -t * 0.05);
+
+	vec2 noise_tex_size = vec2(textureSize(noise_tex, 0));
+	ivec2 texel = ivec2(mod(noise_uv * noise_tex_size, noise_tex_size));
+
+	float n = texelFetch(noise_tex, texel, 0).r;
+
+	vec4 color;
+	if (n < thresh0)
+		color = layer0_color;
+	else if (n < thresh1)
+		color = layer1_color;
+	else if (n < thresh2)
+		color = layer2_color;
+	else
+		color = layer3_color;
+
+	vec4 base = texture(TEXTURE, UV);
+	COLOR = vec4(color.rgb, base.a);
+}
+
+"
+
+[sub_resource type="OpenSimplexNoise" id=2]
+
+[sub_resource type="NoiseTexture" id=3]
+width = 2500
+height = 3508
+seamless = true
+noise = SubResource( 2 )
+
+[sub_resource type="ShaderMaterial" id=5]
+shader = SubResource( 1 )
+shader_param/layer0_color = Color( 0.941176, 0.25098, 0.0823529, 1 )
+shader_param/layer1_color = Color( 0.964706, 0.360784, 0.0784314, 1 )
+shader_param/layer2_color = Color( 0.968627, 0.47451, 0.0745098, 1 )
+shader_param/layer3_color = Color( 0.972549, 0.607843, 0.0745098, 1 )
+shader_param/pixel_size = 1.0
+shader_param/noise_scale = 200.0
+shader_param/speed = 0.022
+shader_param/thresh0 = 0.409
+shader_param/thresh1 = 0.5
+shader_param/thresh2 = 0.604
+shader_param/noise_tex = SubResource( 3 )
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 1 )
+shader_param/layer0_color = Color( 0.25098, 0.486275, 0.678431, 1 )
+shader_param/layer1_color = Color( 0.278431, 0.596078, 0.694118, 1 )
+shader_param/layer2_color = Color( 0.270588, 0.682353, 0.745098, 1 )
+shader_param/layer3_color = Color( 0.290196, 0.772549, 0.85098, 1 )
+shader_param/pixel_size = 1.0
+shader_param/noise_scale = 200.0
+shader_param/speed = 0.022
+shader_param/thresh0 = 0.409
+shader_param/thresh1 = 0.5
+shader_param/thresh2 = 0.604
+shader_param/noise_tex = SubResource( 3 )
+
+[sub_resource type="Shader" id=6]
+code = "shader_type canvas_item;
+
+uniform sampler2D noise_tex : hint_white;
+uniform vec4 smoke_color : hint_color = vec4(0.6, 0.2, 1.0, 1.0);
+uniform float smoke_size : hint_range(0.5, 10.0) = 2.0;
+uniform float speed : hint_range(-5.0, 5.0) = 1.0;
+uniform float fade_strength : hint_range(0.0, 2.0) = 1.0;
+uniform float alpha_intensity : hint_range(0.0, 1.0) = 0.5;
+uniform float pixel_size : hint_range(1.0, 2000.0) = 8.0;
+uniform int color_steps : hint_range(1, 64) = 4; // cantidad de niveles de color
+
+void fragment() {
+    vec4 base = texture(TEXTURE, UV);
+
+    // pixelar coordenadas UV
+    vec2 pixelated_uv = floor(UV * pixel_size) / pixel_size;
+
+    // animar ruido
+    vec2 noise_uv = pixelated_uv * smoke_size;
+    noise_uv.y -= TIME * 0.1 * speed;
+
+    // obtener ruido
+    float n = texture(noise_tex, noise_uv).r;
+
+    // cuantizar el valor de ruido (paleta limitada)
+    n = floor(n * float(color_steps)) / float(color_steps);
+
+    // desvanecer hacia arriba
+    float fade = clamp(1.0 - UV.y * fade_strength, 0.0, 1.0);
+
+    // humo con alpha y color basado en smoke_color
+    vec4 smoke = smoke_color;
+    smoke.rgb *= n; // aplicar tono del ruido a la intensidad del color
+    smoke.a = n * fade * alpha_intensity;
+
+    // aplicar humo solo si la textura base no es transparente
+    smoke *= step(0.001, base.a);
+
+    // mezclar humo sobre la textura base
+    COLOR = base + smoke * smoke.a;
+    COLOR.a = base.a;
+}
+"
+
+[sub_resource type="OpenSimplexNoise" id=7]
+
+[sub_resource type="NoiseTexture" id=8]
+noise = SubResource( 7 )
+
+[sub_resource type="ShaderMaterial" id=9]
+shader = SubResource( 6 )
+shader_param/smoke_color = Color( 1, 0.2, 0.8, 1 )
+shader_param/smoke_size = 7.02
+shader_param/speed = -1.0
+shader_param/fade_strength = 0.0
+shader_param/alpha_intensity = 0.774
+shader_param/pixel_size = 315.537
+shader_param/color_steps = 5
+shader_param/noise_tex = SubResource( 8 )
+
+[node name="Shaders" type="Node2D"]
+
+[node name="Fire" type="Node2D" parent="."]
+
+[node name="Sprite" type="Sprite" parent="Fire"]
+texture = ExtResource( 1 )
+region_enabled = true
+region_rect = Rect2( 144, 64, 32, 64 )
+
+[node name="Sprite2" type="Sprite" parent="Fire"]
+material = SubResource( 5 )
+position = Vector2( 0, 1 )
+texture = ExtResource( 1 )
+region_enabled = true
+region_rect = Rect2( 305, 194, 30, 61 )
+
+[node name="Blue Fire" type="Node2D" parent="."]
+
+[node name="Sprite" type="Sprite" parent="Blue Fire"]
+texture = ExtResource( 1 )
+region_enabled = true
+region_rect = Rect2( 176, 64, 32, 64 )
+
+[node name="Sprite2" type="Sprite" parent="Blue Fire"]
+material = SubResource( 4 )
+position = Vector2( 0, 1 )
+texture = ExtResource( 1 )
+region_enabled = true
+region_rect = Rect2( 305, 194, 30, 61 )
+
+[node name="Mirror" type="Node2D" parent="."]
+
+[node name="Sprite" type="Sprite" parent="Mirror"]
+material = SubResource( 9 )
+texture = ExtResource( 1 )
+region_enabled = true
+region_rect = Rect2( 112, 64, 32, 64 )
