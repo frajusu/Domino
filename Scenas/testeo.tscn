@@ -1,0 +1,215 @@
+[gd_scene load_steps=11 format=2]
+
+[ext_resource path="res://icon.png" type="Texture" id=1]
+[ext_resource path="res://assets/tex/pixel_barras.png" type="Texture" id=2]
+[ext_resource path="res://assets/tex/stamps.png" type="Texture" id=3]
+[ext_resource path="res://assets/shaders/brillito.tres" type="Material" id=4]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform float transparencia : hint_range(0.0, 1.0) = 0.5;
+uniform float fuerza_onda : hint_range(0.0, 10.0) = 3.0;
+uniform float velocidad_onda : hint_range(0.0, 10.0) = 1.5;
+uniform float frecuencia_bandas : hint_range(1.0, 30.0) = 10.0;
+
+// Paleta fantasmal ordenada de oscuro ➜ claro
+const vec3 PAL[12] = vec3[](
+	vec3(0.184, 0.196, 0.364),
+	vec3(0.224, 0.271, 0.427),
+	vec3(0.259, 0.345, 0.475),
+	vec3(0.286, 0.420, 0.514),
+	vec3(0.318, 0.490, 0.569),
+	vec3(0.322, 0.549, 0.624),
+	vec3(0.329, 0.635, 0.584),
+	vec3(0.439, 0.737, 0.576),
+	vec3(0.549, 0.835, 0.537),
+	vec3(0.718, 0.878, 0.592),
+	vec3(0.855, 0.937, 0.671),
+	vec3(0.945, 0.949, 0.714)
+);
+
+void fragment() {
+	vec4 tex = texture(TEXTURE, UV);
+	if (tex.a <= 0.001) discard;
+
+	// Normalizar alpha
+	tex.a = clamp(tex.a, 0.0, 1.0);
+
+	// --- NUEVO: calcular brillo ignorando alpha ---
+	vec3 color_rgb = tex.rgb / max(tex.a, 0.001); // evita oscurecer blancos semitransparentes
+	color_rgb = clamp(color_rgb, 0.0, 1.0);
+	float brillo = (color_rgb.r + color_rgb.g + color_rgb.b) / 3.0;
+
+	// Paleta interpolada
+	float idx = brillo * float(PAL.length() - 1);
+	int i = int(floor(idx));
+	int j = min(i + 1, PAL.length() - 1);
+	float t = idx - float(i);
+	vec3 fantasma = mix(PAL[i], PAL[j], t);
+
+	// Distorsión tipo CRT
+	float offset = sin(UV.y * frecuencia_bandas + TIME * velocidad_onda) * (fuerza_onda / 100.0);
+	vec2 uv_dist = UV + vec2(offset, 0.0);
+	vec4 tex2 = texture(TEXTURE, uv_dist);
+
+	// Aplicar color final
+	float alpha_final = clamp(tex2.a, 0.0, 1.0) * transparencia;
+	COLOR = vec4(fantasma, alpha_final);
+}
+
+"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/transparencia = 0.656
+shader_param/fuerza_onda = 0.27
+shader_param/velocidad_onda = 7.186
+shader_param/frecuencia_bandas = 24.598
+
+[sub_resource type="Shader" id=5]
+code = "shader_type canvas_item;
+
+uniform float progress : hint_range(0.0, 1.0) = 0.0;
+uniform bool invert = false;
+uniform bool use_sprite_alpha = true;
+
+void fragment() {
+	vec4 tex = texture(TEXTURE, UV);
+	float alpha = tex.a;
+
+	// Centro vertical
+	float center = 0.5;
+
+	// Distancia vertical desde el centro
+	float dist = abs(UV.y - center);
+
+	// Borde que se abre desde los bordes hacia el centro
+	float edge = mix(0.5, 0.0, progress);
+
+	// Aparece desde arriba y abajo hacia el centro
+	float transition = 1.0 - step(dist, edge);
+
+	// Invertir si se desea
+	if (invert) transition = 1.0 - transition;
+
+	alpha = use_sprite_alpha ? min(alpha, transition) : transition;
+
+	COLOR = vec4(tex.rgb, alpha);
+}
+"
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 5 )
+shader_param/progress = 0.0
+shader_param/invert = false
+shader_param/use_sprite_alpha = true
+
+[sub_resource type="Shader" id=6]
+code = "shader_type canvas_item;
+
+uniform float velocidad = 20.184;
+uniform float tamano_punto = 3.421;
+uniform vec2 tile_pixel_size = vec2(16.0, 16.0);
+uniform float color : hint_range(0.0, 1.0); // 0=negro, 0.5=original, 1=blanco
+uniform int borde_pixels = 1;
+uniform float alpha_umbral = 0.9;
+
+void fragment(){
+    vec2 tex_size = vec2(textureSize(TEXTURE, 0));
+    vec2 tile_uv_size = tile_pixel_size / tex_size;
+
+    vec2 tile_index = floor(UV / tile_uv_size);
+    vec2 tile_origin = tile_index * tile_uv_size;
+    vec2 local_uv = (UV - tile_origin) / tile_uv_size;
+
+    if(local_uv.x < 0.0 || local_uv.x > 1.0 || local_uv.y < 0.0 || local_uv.y > 1.0)
+        discard;
+
+    float dx = 1.0 / tile_pixel_size.x;
+    float dy = 1.0 / tile_pixel_size.y;
+    vec2 px = tile_uv_size * vec2(dx, dy);
+
+    float center = texture(TEXTURE, UV).a;
+    if(center <= 0.0)
+        discard;
+
+    float borde = 0.0;
+
+    for(int i = 1; i <= borde_pixels; i++){
+        vec2 off = vec2(float(i) * px.x, float(i) * px.y);
+
+        float left  = texture(TEXTURE, UV + vec2(-off.x, 0.0)).a;
+        float right = texture(TEXTURE, UV + vec2( off.x, 0.0)).a;
+        float up    = texture(TEXTURE, UV + vec2(0.0, -off.y)).a;
+        float down  = texture(TEXTURE, UV + vec2(0.0,  off.y)).a;
+
+        if(left < alpha_umbral || right < alpha_umbral || up < alpha_umbral || down < alpha_umbral){
+            borde = 1.0;
+            break;
+        }
+    }
+
+    // ================================
+    //     LINEA PUNTEADA PIXEL PERFECT
+    // ================================
+    vec2 pixel = floor(local_uv * tile_pixel_size);
+
+    float t = TIME * velocidad;
+
+    float linea = mod(pixel.x + pixel.y + t, tamano_punto);
+    float punteado = step(tamano_punto * 0.5, linea);
+
+    float final = borde * punteado;
+
+    if(final > 0.0){
+        vec4 base_color = texture(TEXTURE, UV);
+
+        // mapeo 0 → negro, 0.5 → original, 1 → blanco
+        vec3 final_color;
+        if (color < 0.5) {
+            float t2 = color / 0.5;
+            final_color = mix(vec3(0.0), base_color.rgb, t2);
+        } else {
+            float t2 = (color - 0.5) / 0.5;
+            final_color = mix(base_color.rgb, vec3(1.0), t2);
+        }
+
+        COLOR.rgb = final_color;
+        COLOR.a = final;
+    } else {
+        discard;
+    }
+}
+"
+
+[sub_resource type="ShaderMaterial" id=7]
+shader = SubResource( 6 )
+shader_param/velocidad = 10.0
+shader_param/tamano_punto = 3.421
+shader_param/tile_pixel_size = Vector2( 16, 16 )
+shader_param/color = 0.0
+shader_param/borde_pixels = 1
+shader_param/alpha_umbral = 0.9
+
+[node name="testeo" type="Node2D"]
+
+[node name="fantasma" type="Sprite" parent="."]
+material = SubResource( 2 )
+position = Vector2( 250, 189 )
+texture = ExtResource( 1 )
+
+[node name="barras" type="Sprite" parent="."]
+material = SubResource( 4 )
+scale = Vector2( 1024, 576 )
+texture = ExtResource( 2 )
+
+[node name="Sprite" type="Sprite" parent="."]
+material = ExtResource( 4 )
+texture = ExtResource( 3 )
+
+[node name="Sprite2" type="Sprite" parent="."]
+material = SubResource( 7 )
+position = Vector2( -183, -204 )
+texture = ExtResource( 3 )
+region_rect = Rect2( 96, 0, 16, 16 )
