@@ -1,0 +1,268 @@
+[gd_scene load_steps=36 format=2]
+
+[ext_resource path="res://assets/tex/sprite_sheets.png" type="Texture" id=1]
+[ext_resource path="res://Scripts/y-sort-muro.gd" type="Script" id=2]
+[ext_resource path="res://assets/tex/diseños y enemigos.png" type="Texture" id=3]
+[ext_resource path="res://assets/tex/humo_fogata.png" type="Texture" id=4]
+[ext_resource path="res://assets/tex/nuevos enemigos.png" type="Texture" id=5]
+
+[sub_resource type="RectangleShape2D" id=16]
+extents = Vector2( 6.43198, 12.932 )
+
+[sub_resource type="Animation" id=18]
+resource_name = "danio"
+length = 1.5
+tracks/0/type = "value"
+tracks/0/path = NodePath(".:scale")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.5, 1, 1.5 ),
+"transitions": PoolRealArray( 1, 1, 1, 1 ),
+"update": 0,
+"values": [ Vector2( 1, 1 ), Vector2( 0.9, 1.3 ), Vector2( 1.3, 0.9 ), Vector2( 1, 1 ) ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("Particles2D:emitting")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 0.1 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+
+[sub_resource type="Curve" id=19]
+max_value = 3.0
+_data = [ Vector2( 0, 0.364773 ), 0.0, 0.0, 0, 0, Vector2( 1, 1.63977 ), 0.0, 0.0, 0, 0 ]
+
+[sub_resource type="CurveTexture" id=20]
+curve = SubResource( 19 )
+
+[sub_resource type="ParticlesMaterial" id=21]
+emission_shape = 2
+emission_box_extents = Vector3( 0, 5, 1 )
+flag_disable_z = true
+spread = 180.0
+gravity = Vector3( 0, 0, 0 )
+initial_velocity = 5.0
+orbit_velocity = 0.0
+orbit_velocity_random = 0.0
+scale_curve = SubResource( 20 )
+color = Color( 0.654902, 0.0705882, 0.0705882, 1 )
+
+[sub_resource type="AtlasTexture" id=22]
+atlas = ExtResource( 5 )
+region = Rect2( 944, 464, 48, 48 )
+
+[sub_resource type="AtlasTexture" id=23]
+atlas = ExtResource( 5 )
+region = Rect2( 800, 368, 48, 48 )
+
+[sub_resource type="AtlasTexture" id=24]
+atlas = ExtResource( 5 )
+region = Rect2( 848, 368, 48, 48 )
+
+[sub_resource type="AtlasTexture" id=25]
+atlas = ExtResource( 5 )
+region = Rect2( 896, 368, 48, 48 )
+
+[sub_resource type="AtlasTexture" id=26]
+atlas = ExtResource( 5 )
+region = Rect2( 944, 368, 48, 48 )
+
+[sub_resource type="AtlasTexture" id=27]
+atlas = ExtResource( 5 )
+region = Rect2( 800, 416, 48, 48 )
+
+[sub_resource type="AtlasTexture" id=28]
+atlas = ExtResource( 5 )
+region = Rect2( 848, 416, 48, 48 )
+
+[sub_resource type="AtlasTexture" id=29]
+atlas = ExtResource( 5 )
+region = Rect2( 896, 416, 48, 48 )
+
+[sub_resource type="AtlasTexture" id=30]
+atlas = ExtResource( 5 )
+region = Rect2( 944, 416, 48, 48 )
+
+[sub_resource type="SpriteFrames" id=31]
+animations = [ {
+"frames": [ SubResource( 22 ), SubResource( 23 ), SubResource( 24 ), SubResource( 25 ), SubResource( 26 ), SubResource( 27 ), SubResource( 28 ), SubResource( 29 ), SubResource( 30 ) ],
+"loop": false,
+"name": "default",
+"speed": 5.0
+} ]
+
+[sub_resource type="RectangleShape2D" id=17]
+extents = Vector2( 4.76837e-07, 0.353552 )
+
+[sub_resource type="CanvasItemMaterial" id=3]
+particles_animation = true
+particles_anim_h_frames = 3
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="Gradient" id=4]
+offsets = PoolRealArray( 0, 0.894118, 1 )
+colors = PoolColorArray( 1, 1, 1, 0.427451, 0.652832, 0.652832, 0.652832, 0.741176, 0.505882, 0.505882, 0.505882, 0 )
+
+[sub_resource type="GradientTexture" id=32]
+gradient = SubResource( 4 )
+
+[sub_resource type="ParticlesMaterial" id=6]
+flag_disable_z = true
+direction = Vector3( 0, -100, 0 )
+spread = 5.0
+gravity = Vector3( 0, -1, 0 )
+initial_velocity = 15.0
+initial_velocity_random = 1.0
+angular_velocity = 2.0
+angular_velocity_random = 1.0
+orbit_velocity = 0.0
+orbit_velocity_random = 0.0
+color_ramp = SubResource( 32 )
+anim_offset = 1.0
+anim_offset_random = 1.0
+
+[sub_resource type="AtlasTexture" id=7]
+atlas = ExtResource( 3 )
+region = Rect2( 160, 304, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=8]
+atlas = ExtResource( 3 )
+region = Rect2( 176, 304, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=9]
+atlas = ExtResource( 3 )
+region = Rect2( 192, 304, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=10]
+atlas = ExtResource( 3 )
+region = Rect2( 208, 304, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=11]
+atlas = ExtResource( 3 )
+region = Rect2( 224, 304, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=12]
+atlas = ExtResource( 3 )
+region = Rect2( 240, 304, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=13]
+atlas = ExtResource( 3 )
+region = Rect2( 256, 304, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=14]
+atlas = ExtResource( 3 )
+region = Rect2( 272, 304, 16, 16 )
+
+[sub_resource type="SpriteFrames" id=15]
+animations = [ {
+"frames": [ SubResource( 7 ), SubResource( 8 ), SubResource( 9 ), SubResource( 10 ), SubResource( 11 ), SubResource( 12 ), SubResource( 13 ), SubResource( 14 ) ],
+"loop": true,
+"name": "default",
+"speed": 5.0
+} ]
+
+[sub_resource type="RectangleShape2D" id=1]
+extents = Vector2( 5.5052, 5.5052 )
+
+[node name="objeto" type="KinematicBody2D" groups=["objeto"]]
+collision_layer = 2147516416
+collision_mask = 2147516416
+script = ExtResource( 2 )
+
+[node name="muro" type="Sprite" parent="."]
+visible = false
+position = Vector2( 0, -9 )
+texture = ExtResource( 1 )
+region_enabled = true
+region_rect = Rect2( 68, 51, 22, 32 )
+
+[node name="detector_balas" type="Area2D" parent="muro"]
+position = Vector2( 0, 9 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="muro/detector_balas"]
+position = Vector2( -0.5, -8.06802 )
+shape = SubResource( 16 )
+
+[node name="barril_explosivo" type="Sprite" parent="."]
+visible = false
+position = Vector2( 0, -9 )
+texture = ExtResource( 1 )
+region_enabled = true
+region_rect = Rect2( 240, 17, 15, 29 )
+
+[node name="detector_balas" type="Area2D" parent="barril_explosivo"]
+position = Vector2( 0, 9 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="barril_explosivo/detector_balas"]
+position = Vector2( -0.43198, -8.06802 )
+shape = SubResource( 16 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="barril_explosivo"]
+playback_speed = 6.0
+anims/danio = SubResource( 18 )
+
+[node name="Particles2D" type="Particles2D" parent="barril_explosivo"]
+emitting = false
+amount = 30
+lifetime = 5.0
+one_shot = true
+speed_scale = 40.0
+explosiveness = 0.74
+local_coords = false
+process_material = SubResource( 21 )
+
+[node name="barril_explosivo_explosion" type="AnimatedSprite" parent="barril_explosivo"]
+position = Vector2( 0, -1 )
+z_index = 5
+frames = SubResource( 31 )
+speed_scale = 4.0
+
+[node name="fogata" type="Sprite" parent="."]
+visible = false
+position = Vector2( 0, -1 )
+z_index = -1
+texture = ExtResource( 3 )
+region_enabled = true
+region_rect = Rect2( 144, 307, 15, 13 )
+
+[node name="detector_balas" type="Area2D" parent="fogata"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="fogata/detector_balas"]
+position = Vector2( -0.249999, 7.25 )
+rotation = 0.785398
+shape = SubResource( 17 )
+
+[node name="humo" type="Node2D" parent="fogata"]
+z_as_relative = false
+
+[node name="Particles2D" type="Particles2D" parent="fogata/humo"]
+material = SubResource( 3 )
+position = Vector2( -1, -10 )
+amount = 10
+lifetime = 5.0
+process_material = SubResource( 6 )
+texture = ExtResource( 4 )
+
+[node name="AnimatedSprite" type="AnimatedSprite" parent="fogata"]
+position = Vector2( -1, -7 )
+frames = SubResource( 15 )
+frame = 4
+speed_scale = 2.0
+playing = true
+
+[node name="KinematicBody2D" type="CollisionShape2D" parent="."]
+position = Vector2( -0.5, -1 )
+rotation = 0.785398
+shape = SubResource( 1 )
+
+[connection signal="animation_finished" from="barril_explosivo/barril_explosivo_explosion" to="." method="_on_barril_explosivo_explosion_animation_finished"]
