@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/brutal.ogg-14524960a4286550ef9fa05dfe6c0a32.oggstr"
+
+[deps]
+
+source_file="res://assets/SFX/music/brutal.ogg"
+dest_files=[ "res://.import/brutal.ogg-14524960a4286550ef9fa05dfe6c0a32.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0
