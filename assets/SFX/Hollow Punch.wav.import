@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/Hollow Punch.wav-d84788aa77048331c0ef70d7ec28ee68.sample"
+
+[deps]
+
+source_file="res://assets/SFX/Hollow Punch.wav"
+dest_files=[ "res://.import/Hollow Punch.wav-d84788aa77048331c0ef70d7ec28ee68.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0
