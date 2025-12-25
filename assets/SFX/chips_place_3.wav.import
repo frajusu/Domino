@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/chips_place_3.wav-88a0398b66bd6b793f7d3b427cb4edb0.sample"
+
+[deps]
+
+source_file="res://assets/SFX/chips_place_3.wav"
+dest_files=[ "res://.import/chips_place_3.wav-88a0398b66bd6b793f7d3b427cb4edb0.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=true
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0
