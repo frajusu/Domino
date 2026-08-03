@@ -1,29 +1,29 @@
 # Domino
 
-Juego de dominó tipo Balatro hecho en Godot.
+A Balatro-inspired domino game made with Godot.
 
-## Características
+## Features
 
-- Mecánica de dominó inspirada en Balatro
-- Estrategia de cartas/fichas con sinergias
-- Estética retro-pixel con tipografía customizada
-- Integración con Discord (Rich Presence)
-- Desarrollado con Godot
+- Domino mechanics inspired by Balatro
+- Tile/card strategy with synergies
+- Retro-pixel aesthetic with custom typography
+- Discord integration (Rich Presence)
+- Built with Godot
 
-## Cómo jugar
+## How to play
 
-1. Abrí el proyecto en Godot 4
-2. Ejecutá la escena principal (`Scenas/pantalla_carga.tscn`)
-3. Armar combinaciones de fichas para encadenar puntos
+1. Open the project in Godot 4
+2. Run the main scene (`Scenas/pantalla_carga.tscn`)
+3. Combine tiles to chain points and stack combos
 
-## Estructura
+## Structure
 
 ```
-Scenas/       Escenas del juego
-Scripts/      Lógica y gameplay
-assets/       Fuentes, texturas, SFX y shaders
+Scenas/       Game scenes
+Scripts/      Logic and gameplay
+assets/       Fonts, textures, SFX and shaders
 ```
 
-## Requisitos
+## Requirements
 
 - Godot 4
